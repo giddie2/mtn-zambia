@@ -361,7 +361,7 @@
             </div>
             <div class="input-group">
               <label>Guarantor Phone</label>
-              <input type="tel" id="guarantorPhone" placeholder="e.g. 7 66 123 456" inputmode="numeric">
+              <input type="tel" id="guarantorPhone" placeholder="e.g. 07 66 123 456" inputmode="numeric">
               <div class="error-message" id="phoneError">Invalid number or identical to yours.</div>
             </div>
 
@@ -432,8 +432,8 @@
           phoneError.textContent = 'Guarantor phone cannot be the same as yours.';
           phoneError.classList.add('visible');
           return false;
-        } else if (digits.length !== 9) {
-          phoneError.textContent = 'Please enter a valid phone number (9 digits).';
+        } else if (digits.length !== 10) {
+          phoneError.textContent = 'Please enter a valid phone number (10 digits).';
           phoneError.classList.add('visible');
           return false;
         } else {
