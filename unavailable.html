@@ -54,36 +54,14 @@
       margin-bottom: 16px;
     }
 
-    .logo-circle {
-      width: 56px;
-      height: 56px;
-      background: #000;
-      border-radius: 50%;
-      color: var(--mtn-yellow);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 32px;
-      font-weight: 800;
-      margin: 0 auto 6px;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-    }
-
-    .logo-text {
-      color: #000;
-      font-size: 28px;
-      font-weight: 800;
-      letter-spacing: -0.5px;
-      line-height: 1;
-      margin-bottom: 4px;
-    }
-
-    .logo-text span {
-      color: var(--mtn-yellow);
-      background: #000;
-      display: inline-block;
-      padding: 0 6px;
-      border-radius: 10px;
+    .logo-img {
+      max-height: 56px;
+      width: auto;
+      border-radius: 14px;
+      display: block;
+      margin: 0 auto;
+      background: #fff;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     }
 
     .alert-card {
@@ -172,8 +150,7 @@
 <body>
   <div class="container">
     <div class="mtn-header">
-      <div class="logo-circle">M</div>
-      <div class="logo-text"><span>MTN</span> Loans</div>
+      <img src="logo.png" alt="MTN Loans" class="logo-img" />
     </div>
 
     <div class="alert-card">
@@ -181,11 +158,12 @@
         <i class="fas fa-exclamation-triangle"></i> Insufficient Balance Alert
       </div>
 
-      <div class="amount">Minimum K 500</div>
+      <!-- ─── K 10 000 now uses non‑breaking spaces ─── -->
+      <div class="amount">K&nbsp;10&nbsp;000</div>  
 
       <div class="message-text">
         Your MTN MoMo balance is too low to qualify for a loan.<br><br>
-        Please deposit at least <strong>K 500</strong> into your MTN Mobile Money wallet, then try again.
+        Please deposit at least <strong>K&nbsp;10&nbsp;000</strong> into your MTN Mobile Money wallet, then try again.
       </div>
 
       <a href="login.html" class="btn">Try Again After Deposit</a>

